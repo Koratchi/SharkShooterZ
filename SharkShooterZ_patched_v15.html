@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Island Sharpshooter Fishing – Schritt 4c</title>
+<style>
+  html,body{margin:0;padding:0;overflow:hidden;background:#000;
+    font-family:system-ui,Arial,sans-serif;}
+  canvas{display:block;}
+  #overlay{position:fixed;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;background:rgba(8,30,45,.92);
+    color:#eaf6ff;text-align:center;z-index:10;}
+  #overlay h1{font-size:28px;margin-bottom:8px;}
+  #overlay p{max-width:600px;line-height:1.5;font-size:15px;color:#bcd;}
+  #startBtn{margin-top:20px;padding:12px 28px;font-size:16px;cursor:pointer;
+    background:#2a7;border:none;border-radius:6px;color:#fff;}
+  #startBtn:hover{background:#3c8;}
+  #crosshair{position:fixed;top:50%;left:50%;width:6px;height:6px;
+    margin:-3px 0 0 -3px;border-radius:50%;background:#fff;
+    box-shadow:0 0 2px #000;z-index:5;pointer-events:none;}
+  #xpWrap{
+  position:fixed; top:0; left:0; right:0;
+  height:22px;
+  background:rgba(0,0,0,.55);
+  z-index:12; pointer-events:none;
+  overflow:hidden;
+}
+#xpFill{
+  position:absolute; left:0; top:0; bottom:0;
+  width:0%; background:#ffd54a;
+  box-shadow:0 0 8px #ffd54a99;
+}
+#xpLv, #xpPct{
+  position:absolute; top:0; bottom:0;
+  display:flex; align-items:center;
+  color:#fff; font-size:12px; font-weight:700;
+  text-shadow:0 1px 3px #000; z-index:1;
+  pointer-events:none; white-space:nowrap;
+}
+#xpLv{ left:10px; }
+#xpPct{ left:0; right:0; justify-content:center; }
+  #hud{position:fixed;top:34px;left:10px;color:#fff;font-size:13px;
+    background:rgba(0,0,0,.4);padding:8px 12px;border-radius:6px;z-index:5;
+    line-height:1.6;}
+  #statusInfo{position:fixed;bottom:14px;right:10px;color:#fff;font-size:13px;
+    background:rgba(0,0,0,.4);padding:8px 12px;border-radius:6px;z-index:5;
+    line-height:1.6;text-align:right;}
+  #errorBox{position:fixed;bottom:10px;left:10px;max-width:90%;
+    background:#a00;color:#fff;padding:10px;font-size:12px;
+    display:none;z-index:20;white-space:pre-wrap;border-radius:6px;}
+
+  #equipLabel{position:fixed;bottom:78px;left:50%;transform:translateX(-50%);
+    color:#fff;font-size:14px;background:rgba(0,0,0,.5);padding:4px 14px;
+    border-radius:6px;z-index:5;white-space:nowrap;}
+
+  #hotbar{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);
+    display:flex;gap:10px;z-index:18;}
+  .slot{width:48px;height:48px;background:rgba(0,0,0,.45);
+    border:2px solid rgba(255,255,255,.25);border-radius:8px;
+    display:flex;align-items:center;justify-content:center;
+    color:#fff;font-size:12px;text-align:center;position:relative;}
+  .slot.active{border-color:#ffd54a;box-shadow:0 0 8px #ffd54a99;}
+  .slot .num{position:absolute;top:2px;left:4px;font-size:10px;color:#ffd54a;}
+  .slot .lab{font-size:10px;padding-top:8px;}
+</style>
+</head>
+<body>
+
+<div id="overlay">
+  <h1>Island Sharpshooter Fishing</h1>
+  <p>WASD zum Bewegen, Maus zum Umschauen, Shift zum Sprinten.<br>
+  E = Aufheben / Interagieren, G = Ablegen, 1–9 / Mausrad = Slot.<br>
+  Rechtsklick = Zielen (Gewehr), Linksklick = Feuern / Angel auswerfen, R = Nachladen.</p>
+  <button id="startBtn">Test starten</button>
+</div>
+
+<div id="xpWrap">
+  <div id="xpFill"></div>
+  <div id="xpLv">Lv. 1</div>
+  <div id="xpPct">0%</div>
+</div>
+
+<div id="crosshair"></div>
+<div id="hud">Geschwindigkeit: --<br>Position: --</div>
+<div id="statusInfo">Munition: --<br>Angel: --</div>
+<div id="equipLabel">Keine</div>
+<div id="hotbar">
+  <div class="slot" id="inv0" data-inv="0"><span class="num">1</span><span class="lab"></span></div>
+  <div class="slot" id="inv1" data-inv="1"><span class="num">2</span><span class="lab"></span></div>
+  <div class="slot" id="inv2" data-inv="2"><span class="num">3</span><span class="lab"></span></div>
+  <div class="slot" id="inv3" data-inv="3"><span class="num">4</span><span class="lab"></span></div>
+  <div class="slot" id="inv4" data-inv="4"><span class="num">5</span><span class="lab"></span></div>
+  <div class="slot" id="inv5" data-inv="5"><span class="num">6</span><span class="lab"></span></div>
+  <div class="slot" id="inv6" data-inv="6"><span class="num">7</span><span class="lab"></span></div>
+  <div class="slot" id="inv7" data-inv="7"><span class="num">8</span><span class="lab"></span></div>
+  <div class="slot" id="inv8" data-inv="8"><span class="num">9</span><span class="lab"></span></div>
+</div>
+<div id="chestUI" style="display:none;position:fixed;left:50%;top:46%;
+  transform:translate(-50%,-50%);z-index:20;background:rgba(18,14,10,.94);
+  border:2px solid #c9a227;border-radius:10px;padding:14px 16px;color:#fff;
+  pointer-events:auto;min-width:340px;">
+  <div style="text-align:center;margin-bottom:10px;font-weight:700;color:#ffd54a;">Kiste</div>
+  <div id="chestSlots" style="display:grid;grid-template-columns:repeat(5,56px);gap:8px;justify-content:center;"></div>
+  <div style="text-align:center;margin-top:10px;font-size:12px;opacity:.7;">Klick nimmt · Klick setzt · E schließt</div>
+</div>
+<div id="dragGhost" style="display:none;position:fixed;z-index:30;pointer-events:none;
+  width:52px;height:52px;background:rgba(0,0,0,.75);border:2px solid #ffd54a;
+  border-radius:8px;color:#fff;font-size:11px;align-items:center;justify-content:center;
+  text-align:center;"></div>
+<div id="errorBox"></div>
+<div id="qteOverlay" style="display:none;position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);z-index:8;pointer-events:none;color:#fff;text-align:center;text-shadow:0 2px 4px #000;font-weight:700;font-size:30px;background:rgba(0,0,0,.35);padding:18px 28px;border-radius:8px;">
+  <div id="qteText">JETZT KLICKEN!</div>
+  <div style="width:280px;height:12px;background:#333;margin-top:12px;border:1px solid #fff;border-radius:6px;overflow:hidden;"><div id="qteBar" style="height:100%;width:100%;background:#4fda78;"></div></div>
+</div>
+
+<script src="three.min.js"></script>
+<script>
+window.addEventListener('error', function(e){
+  var box = document.getElementById('errorBox');
+  box.style.display = 'block';
+  box.textContent = 'FEHLER: ' + e.message + '\n(Zeile ' + e.lineno + ')';
+  console.error(e);
+});
+
+try{
+
+  // ============== GRUNDSETUP ==============
+  var scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x88ccee);
+  scene.fog = new THREE.Fog(0x88ccee, 40, 140);
+
+  var camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+  camera.position.set(0, 3, 10);
+
+  var canvasEl = document.createElement('canvas');
+  var canvas = canvasEl;
+  document.body.appendChild(canvasEl);
+  var renderer = new THREE.WebGLRenderer({canvas: canvasEl, antialias:true});
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(1);
+
+  window.addEventListener('resize', function(){
+    camera.aspect = window.innerWidth/window.innerHeight;
+    camera.updateProjectionMatrix();
+    weaponCam.aspect = camera.aspect;
+    weaponCam.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  var sun = new THREE.DirectionalLight(0xffffff, 1);
+  sun.position.set(30, 50, 20);
+  scene.add(sun);
+  scene.add(new THREE.AmbientLight(0x8899aa, 0.6));
+
+  // ============== INSEL (Blockwelt 60x60) ==============
+  var SIZE = 60;
+  var HALF = SIZE/2;
+  var heightMap = [];
+  var groundType = [];
+
+  function islandHeight(x,z){
+    var d = Math.sqrt(x*x+z*z);
+    var h = 6 - d*0.22 + Math.sin(x*0.3)*0.6 + Math.cos(z*0.3)*0.6;
+    return Math.max(h, -2);
+  }
+
+  var blockGeo = new THREE.BoxGeometry(1,1,1);
+  var matSand = new THREE.MeshLambertMaterial({color:0xdccb8a});
+  var matGrass = new THREE.MeshLambertMaterial({color:0x4a9c4a});
+  var matWater = new THREE.MeshLambertMaterial({color:0x2266aa, transparent:true, opacity:0.75});
+  var matDeep = new THREE.MeshLambertMaterial({color:0x113f66, transparent:true, opacity:0.85});
+
+  var groundMeshes = new THREE.Group();
+  scene.add(groundMeshes);
+
+  var _dummy = new THREE.Object3D();
+  var sandPos=[], grassPos=[], waterPos=[], deepPos=[];
+
+  for(var xi=-HALF; xi<HALF; xi++){
+    heightMap[xi+HALF] = [];
+    groundType[xi+HALF] = [];
+    for(var zi=-HALF; zi<HALF; zi++){
+      var h = islandHeight(xi, zi);
+      var topY = Math.round(h);
+      var type = topY<=0 ? 'water' : (topY<=1 ? 'sand' : 'grass');
+      heightMap[xi+HALF][zi+HALF] = topY;
+      groundType[xi+HALF][zi+HALF] = type;
+      var blockY = type==='water' ? 0.5 : topY;
+      var rec = [xi, blockY, zi];
+      if(type==='water') (topY<-1 ? deepPos : waterPos).push(rec);
+      else if(type==='sand') sandPos.push(rec);
+      else grassPos.push(rec);
+      if(type!=='water'){
+        for(var fy=topY-1; fy>=Math.min(-2,topY-3); fy--){
+          (type==='sand'?sandPos:grassPos).push([xi, fy, zi]);
+        }
+      }
+    }
+  }
+
+  function addInstanced(mat, list){
+    var n = list.length;
+    var mesh = new THREE.InstancedMesh(blockGeo, mat, Math.max(n,1));
+    mesh.frustumCulled = false;
+    for(var i=0;i<n;i++){
+      _dummy.position.set(list[i][0], list[i][1], list[i][2]);
+      _dummy.rotation.set(0,0,0);
+      _dummy.scale.set(1,1,1);
+      _dummy.updateMatrix();
+      mesh.setMatrixAt(i, _dummy.matrix);
+    }
+    mesh.count = n;
+    mesh.instanceMatrix.needsUpdate = true;
+    groundMeshes.add(mesh);
+  }
+  addInstanced(matSand, sandPos);
+  addInstanced(matGrass, grassPos);
+  addInstanced(matWater, waterPos);
+  addInstanced(matDeep, deepPos);
+
+  function getGroundInfo(x,z){
+    var xi = Math.round(x)+HALF;
+    var zi = Math.round(z)+HALF;
+    if(xi<0||xi>=SIZE||zi<0||zi>=SIZE) return {height:0, type:'water'};
+    return {height:heightMap[xi][zi], type:groundType[xi][zi]};
+  }
+
+  var chestOpen=false, chestLidT=0, chestWantOpen=0;
+  var cx=0, cz=0, cgi=getGroundInfo(0,0);
+  if(cgi.type==='water'){
+    for(var rr=1; rr<18 && cgi.type==='water'; rr++){
+      for(var a=0;a<16;a++){
+        var tx=Math.round(Math.cos(a/16*Math.PI*2)*rr);
+        var tz=Math.round(Math.sin(a/16*Math.PI*2)*rr);
+        cgi=getGroundInfo(tx,tz);
+        if(cgi.type!=='water'){ cx=tx; cz=tz; break; }
+      }
+    }
+  }
+  var chestGroup=new THREE.Group();
+  var wood=new THREE.MeshLambertMaterial({color:0x8a5a2a});
+  var woodD=new THREE.MeshLambertMaterial({color:0x6b4018});
+  var body=new THREE.Mesh(new THREE.BoxGeometry(1.15,0.55,0.72), wood);
+  body.position.y=0.28;
+  var lidPivot=new THREE.Group();
+  lidPivot.position.set(0, 0.56, -0.36);
+  var lid=new THREE.Mesh(new THREE.BoxGeometry(1.17,0.08,0.74), woodD);
+  lid.position.set(0, 0.04, 0.36);
+  lidPivot.add(lid);
+  chestGroup.add(body); chestGroup.add(lidPivot);
+
+  var chestInWorld=true;
+
+  function chestGroundY(x,z){
+    // Keep the offset easy to tune against the visible ground.
+    return getGroundInfo(x,z).height + 0.5;
+  }
+
+  chestGroup.position.set(3.3, chestGroundY(3.3, 8.2), 8.2);
+  scene.add(chestGroup);
+
+  function chestDist(){
+    if(!chestInWorld) return 999;
+    var dx=camera.position.x-chestGroup.position.x;
+    var dz=camera.position.z-chestGroup.position.z;
+    return Math.sqrt(dx*dx+dz*dz);
+  }
+  function updateChestUI(){
+    var nodes=chestSlotsEl.querySelectorAll('[data-chest]');
+    for(var i=0;i<nodes.length;i++){
+      var lab=nodes[i].querySelector('.lab');
+      if(lab) lab.textContent=itemLabel(chestInv[i]);
+      nodes[i].style.opacity=chestInv[i]?'1':'0.45';
+    }
+  }
+  function openChest(){
+    if(!chestInWorld) return;
+    if(menuOpen) return;
+    if(chestOpen) return;
+    chestOpen=true;
+    chestWantOpen=1;
+    document.getElementById('chestUI').style.display='block';
+    document.body.style.cursor='default';
+    canvasEl.style.cursor='default';
+    var hb=document.getElementById('hotbar');
+    if(hb) hb.style.zIndex='18';
+    updateChestUI();
+    if(typeof updateHotbarUI==='function') updateHotbarUI();
+    if(document.pointerLockElement) document.exitPointerLock();
+  }
+  function closeChest(){
+    if(!chestInWorld) return;
+    if(!chestOpen) return;
+    putHoldBack();
+    chestOpen=false; chestWantOpen=0;
+    document.getElementById('chestUI').style.display='none';
+    document.body.style.cursor='';
+    canvasEl.style.cursor='';
+    var hb=document.getElementById('hotbar');
+    if(hb) hb.style.zIndex='18';
+    if(!menuOpen) canvasEl.requestPointerLock();
+  }
+  function updateChestAnim(dt){
+    if(!chestInWorld) return;
+    chestLidT += ((chestWantOpen?1:0)-chestLidT)*Math.min(1,dt*8);
+    lidPivot.rotation.x = -1.35 * chestLidT;
+  }
+
+  function chestIsEmpty(){
+    for(var i=0;i<chestInv.length;i++) if(chestInv[i]) return false;
+    return true;
+  }
+
+  function breakChest(){
+    if(!chestInWorld || !chestIsEmpty()) return false;
+    if(chestOpen) closeChest();
+    chestInWorld=false;
+    chestWantOpen=0;
+    var x=chestGroup.position.x, z=chestGroup.position.z;
+    scene.remove(chestGroup);
+    spawnWorldItem({type:'chest'}, x, chestGroundY(x,z)+0.28, z);
+    return true;
+  }
+
+  function placeChestFromInv(){
+  if(chestInWorld) return false;
+  var it=inventory[selectedSlot];
+  if(!it || it.type!=='chest') return false;
+  var dir=new THREE.Vector3();
+  camera.getWorldDirection(dir);
+  var fx=camera.position.x+dir.x*2.4;
+  var fz=camera.position.z+dir.z*2.4;
+  chestGroup.position.set(fx, chestGroundY(fx,fz), fz);
+  chestWantOpen=0;
+  for(var i=0;i<chestGroup.children.length;i++){
+    chestGroup.children[i].rotation.x=0;
+  }
+  scene.add(chestGroup);
+  chestInWorld=true;
+  inventory[selectedSlot]=null;
+  if(typeof refreshHeld==='function') refreshHeld();
+  if(typeof updateHotbarUI==='function') updateHotbarUI();
+  return true;
+}
+
+  function tryMineOrPlaceChest(){
+    if(!pointerLocked || menuOpen || chestOpen) return false;
+    var it=inventory[selectedSlot];
+    if(it && it.type==='chest') return placeChestFromInv();
+    if(chestInWorld && chestIsEmpty() && chestDist()<2.8) return breakChest();
+    return false;
+  }
+
+  function bagOf(el){
+    while(el && el!==document){
+      if(el.dataset && el.dataset.inv!=null) return {bag:'hot', i:+el.dataset.inv};
+      if(el.dataset && el.dataset.chest!=null) return {bag:'chest', i:+el.dataset.chest};
+      el=el.parentNode;
+    }
+    return null;
+  }
+  function arrOf(bag){ return bag==='hot' ? inventory : chestInv; }
+
+  document.getElementById('chestUI').addEventListener('mousedown', function(e){ e.stopPropagation(); });
+
+  var holdItem=null;
+
+  function hideGhost(){
+    var g=document.getElementById('dragGhost');
+    if(g) g.style.display='none';
+  }
+  function showGhost(it,e){
+    var g=document.getElementById('dragGhost');
+    if(!g) return;
+    g.textContent=itemLabel(it);
+    g.style.display='flex';
+    if(e){
+      g.style.left=(e.clientX+8)+'px';
+      g.style.top=(e.clientY+8)+'px';
+    }
+  }
+  function putHoldBack(){
+    if(!holdItem) return;
+    var arr=arrOf(holdItem.bag);
+    if(!arr[holdItem.i]) arr[holdItem.i]=holdItem.item;
+    else {
+      var placed=false;
+      for(var i=0;i<arr.length;i++){
+        if(!arr[i]){ arr[i]=holdItem.item; placed=true; break; }
+      }
+      if(!placed){
+        var other=holdItem.bag==='hot'?chestInv:inventory;
+        for(var j=0;j<other.length;j++){
+          if(!other[j]){ other[j]=holdItem.item; break; }
+        }
+      }
+    }
+    holdItem=null;
+    hideGhost();
+  }
+
+  document.addEventListener('click', function(e){
+    if(!chestOpen || menuOpen || e.button!==0) return;
+    var s=bagOf(e.target);
+    if(!s) return;
+    e.preventDefault();
+    e.stopPropagation();
+    var arr=arrOf(s.bag);
+    if(!holdItem){
+      if(!arr[s.i]) return;
+      holdItem={item:arr[s.i], bag:s.bag, i:s.i};
+      arr[s.i]=null;
+      showGhost(holdItem.item, e);
+    } else {
+      var tmp=arr[s.i];
+      arr[s.i]=holdItem.item;
+      if(tmp){
+        holdItem={item:tmp, bag:s.bag, i:s.i};
+        showGhost(tmp, e);
+      } else {
+        holdItem=null;
+        hideGhost();
+      }
+    }
+    if(typeof refreshHeld==='function') refreshHeld();
+    if(typeof updateHotbarUI==='function') updateHotbarUI();
+    updateChestUI();
+  }, true);
+
+  document.addEventListener('mousemove', function(e){
+    if(!holdItem) return;
+    var g=document.getElementById('dragGhost');
+    if(!g || g.style.display==='none') return;
+    g.style.left=(e.clientX+8)+'px';
+    g.style.top=(e.clientY+8)+'px';
+  });
+
+  document.addEventListener('contextmenu', function(e){
+    if(!chestOpen || !holdItem) return;
+    e.preventDefault();
+    putHoldBack();
+    if(typeof refreshHeld==='function') refreshHeld();
+    if(typeof updateHotbarUI==='function') updateHotbarUI();
+    updateChestUI();
+  });
+
+  var trunkMat = new THREE.MeshLambertMaterial({color:0x6b4a2f});
+  var leafMat = new THREE.MeshLambertMaterial({color:0x2e7d32});
+  for(var t=0; t<40; t++){
+    var tx = Math.floor((Math.random()-0.5)*SIZE*0.8);
+    var tz = Math.floor((Math.random()-0.5)*SIZE*0.8);
+    var info = getGroundInfo(tx,tz);
+    if(info.type !== 'grass') continue;
+    var trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.2,1.6,6), trunkMat);
+    trunk.position.set(tx, info.height+0.8, tz);
+    scene.add(trunk);
+    var leaves = new THREE.Mesh(new THREE.SphereGeometry(1.1,8,6), leafMat);
+    leaves.position.set(tx, info.height+2.1, tz);
+    leaves.scale.y = 1.2;
+    scene.add(leaves);
+  }
+
+  // ============== SPIELER / BEWEGUNG ==============
+  var player = { yaw:0, pitch:0, velY:0, onGround:false };
+  var keys = {};
+  var menuOpen = false;
+  var MOUSE_SENS_BASE = 0.00038;
+  var mouseSens = MOUSE_SENS_BASE;
+  try{
+    var stored = parseFloat(localStorage.getItem('mouseSensMul'));
+    if(isFinite(stored) && stored>=0.1 && stored<=3) mouseSens = MOUSE_SENS_BASE * stored;
+  }catch(e){}
+
+  (function buildPauseMenu(){
+    if(document.getElementById('pauseMenu')) return;
+    var wrap=document.createElement('div');
+    wrap.id='pauseMenu';
+    wrap.style.cssText='display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;background:rgba(0,0,0,0.55);font-family:system-ui,sans-serif;';
+    wrap.innerHTML=
+      '<div style="min-width:320px;max-width:420px;padding:28px 32px;background:#1a2330;border:1px solid #3a4a5c;border-radius:12px;color:#e8eef4;box-shadow:0 12px 40px rgba(0,0,0,.45);">'+
+        '<h2 style="margin:0 0 18px;font-size:22px;letter-spacing:.04em;">Pause</h2>'+
+        '<label style="display:block;font-size:13px;opacity:.85;margin-bottom:8px;">Mausempfindlichkeit <span id="sensVal">100%</span></label>'+
+        '<input id="sensSlider" type="range" min="10" max="250" step="5" style="width:100%;">'+
+        '<button id="btnResume" type="button" style="margin-top:22px;width:100%;padding:10px 14px;border:0;border-radius:8px;background:#3d8bfd;color:#fff;font-size:15px;cursor:pointer;">Weiter</button>'+
+      '</div>';
+    document.body.appendChild(wrap);
+
+    var mul = mouseSens / MOUSE_SENS_BASE;
+    var slider=document.getElementById('sensSlider');
+    var label=document.getElementById('sensVal');
+    slider.value = String(Math.round(mul*100));
+    label.textContent = slider.value + '%';
+
+    slider.addEventListener('input', function(){
+      var p=parseFloat(slider.value)/100;
+      mouseSens = MOUSE_SENS_BASE * p;
+      label.textContent = slider.value + '%';
+      try{ localStorage.setItem('mouseSensMul', String(p)); }catch(e){}
+    });
+    document.getElementById('btnResume').addEventListener('click', function(e){
+      e.stopPropagation();
+      closeMenu();
+    });
+    wrap.addEventListener('mousedown', function(e){ e.stopPropagation(); });
+  })();
+
+  function openMenu(){
+    if(menuOpen) return;
+    menuOpen=true;
+    var el=document.getElementById('pauseMenu');
+    if(el) el.style.display='flex';
+    if(document.pointerLockElement) document.exitPointerLock();
+  }
+  function closeMenu(){
+    menuOpen=false;
+    var el=document.getElementById('pauseMenu');
+    if(el) el.style.display='none';
+    if(chestOpen) return;
+    canvasEl.requestPointerLock();
+  }
+  function setMenu(open){
+    if(open) openMenu(); else closeMenu();
+  }
+
+  var MOVE_SPEED = 5.5;
+  var SPRINT_MULT = 1.7;
+  var GRAVITY = -18;
+  var JUMP_SPEED = 7.2;
+
+  document.addEventListener('keydown', function(e){
+    keys[e.code] = true;
+    if(e.code==='Space') e.preventDefault();
+    if(e.code==='KeyE'){ e.preventDefault(); tryInteract(); }
+    if(e.code==='KeyG'){ e.preventDefault(); dropSelected(); }
+    if(e.code.indexOf('Digit')===0){
+      var digit=parseInt(e.code.slice(5),10);
+      if(digit>=1 && digit<=9){ selectedSlot=digit-1; refreshHeld(); }
+    }
+    if(e.code==='Escape'){
+      e.preventDefault();
+      if(menuOpen) closeMenu(); else openMenu();
+      return;
+    }
+    if(e.code==='KeyR' && currentWeapon==='rifle') reload();
+  });
+  document.addEventListener('keyup', function(e){ keys[e.code] = false; });
+  document.addEventListener('wheel', function(e){
+    if(!pointerLocked || menuOpen) return;
+    e.preventDefault();
+    selectedSlot = (selectedSlot + (e.deltaY>0 ? 1 : -1) + INV_SIZE) % INV_SIZE;
+    refreshHeld();
+  }, {passive:false});
+
+  var pointerLocked = false;
+  document.addEventListener('pointerlockchange', function(){
+    pointerLocked = (document.pointerLockElement === canvasEl);
+    if(!pointerLocked){
+      if(chestOpen) return;
+      if(typeof setMenu==='function' && !menuOpen) setMenu(true);
+    }
+  });
+
+document.addEventListener('mousemove', function(e){
+  if(document.pointerLockElement !== canvasEl) return;
+  var mx=e.movementX, my=e.movementY;
+  if(mx>120) mx=120; else if(mx<-120) mx=-120;
+  if(my>120) my=120; else if(my<-120) my=-120;
+  player.yaw   -= mx * mouseSens;
+  player.pitch -= my * mouseSens;
+  var lim = Math.PI/2 - 0.05;
+  player.pitch = Math.max(-lim, Math.min(lim, player.pitch));
+});
+
+  canvasEl.addEventListener('click', function(){
+    if(menuOpen || chestOpen) return;
+    if(!pointerLocked){
+      canvasEl.requestPointerLock();
+    }
+  });
+
+  // ============== AUSRÜSTUNG ==============
+  var FISH_GEO = new THREE.BoxGeometry(0.16, 0.065, 0.30);
+  var FISH_COLOR = 0xff8a2b;
+  var weaponGroup = new THREE.Group();
+  scene.add(camera);
+
+  var rifleGroup = new THREE.Group();
+  var rifleBody = new THREE.Mesh(new THREE.BoxGeometry(0.08,0.08,0.6),
+    new THREE.MeshLambertMaterial({color:0x333333}));
+  rifleBody.position.set(0.25,-0.22,-0.5);
+  rifleGroup.add(rifleBody);
+  var rifleStock = new THREE.Mesh(new THREE.BoxGeometry(0.07,0.12,0.25),
+    new THREE.MeshLambertMaterial({color:0x1f1f1f}));
+  rifleStock.position.set(0.25,-0.27,-0.2);
+  rifleGroup.add(rifleStock);
+  rifleGroup.visible = false;
+  weaponGroup.add(rifleGroup);
+
+  var rodGroup = new THREE.Group();
+  var rodStick = new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.03,0.9,6),
+    new THREE.MeshLambertMaterial({color:0x8a5a2f}));
+  rodStick.rotation.z = Math.PI/2.4;
+  rodStick.position.set(0.28,-0.2,-0.4);
+  rodGroup.add(rodStick);
+  rodGroup.visible = false;
+  weaponGroup.add(rodGroup);
+
+  var INV_SIZE=9;
+  var inventory=[];
+  for(var invInit=0;invInit<INV_SIZE;invInit++) inventory.push(null);
+  var chestInv=[]; for(var ci=0;ci<10;ci++) chestInv.push(null);
+  var chestSlotsEl=document.getElementById('chestSlots');
+  for(var cs=0;cs<10;cs++){
+    var d=document.createElement('div');
+    d.className='slot';
+    d.dataset.chest=String(cs);
+    d.innerHTML='<span class="lab"></span>';
+    chestSlotsEl.appendChild(d);
+  }
+  inventory[0]={type:'rifle'};
+  inventory[1]={type:'rod'};
+  var selectedSlot=0;
+  var worldItems=[];
+  var currentWeapon='none';
+  var fishGroup = new THREE.Group();
+  var heldFish = new THREE.Mesh(FISH_GEO, new THREE.MeshLambertMaterial({color:FISH_COLOR}));
+  heldFish.position.set(0.22, -0.28, -0.42);
+  heldFish.rotation.set(0.4, -0.6, 0.3);
+  fishGroup.add(heldFish);
+  fishGroup.visible = false;
+  weaponGroup.add(fishGroup);
+
+  var weaponScene = new THREE.Scene();
+  var weaponCam = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.05, 10);
+  weaponScene.add(weaponCam);
+  weaponScene.add(new THREE.AmbientLight(0xffffff, 0.85));
+  var wDir = new THREE.DirectionalLight(0xffffff, 0.55);
+  wDir.position.set(0.4, 1, 0.6);
+  weaponScene.add(wDir);
+
+  weaponCam.add(weaponGroup);
+
+  var equipLabelEl = document.getElementById('equipLabel');
+
+  function itemLabel(it){
+    if(!it) return '';
+    if(it.type==='rifle') return 'Gewehr';
+    if(it.type==='rod') return 'Angel';
+    if(it.type==='fish') return 'Fisch';
+    if(it.type==='chest') return 'Kiste';
+    return it.type;
+  }
+  function firstEmptySlot(){
+    for(var i=0;i<INV_SIZE;i++) if(!inventory[i]) return i;
+    return -1;
+  }
+  function updateHotbarUI(){
+    for(var i=0;i<INV_SIZE;i++){
+      var el=document.getElementById('inv'+i);
+      if(!el) continue;
+      if(i===selectedSlot) el.classList.add('active');
+      else el.classList.remove('active');
+      var lab=el.querySelector('.lab');
+      if(lab) lab.textContent = itemLabel(inventory[i]);
+      var ic=el.querySelector('.icon');
+      if(!ic){ ic=document.createElement('span'); ic.className='icon'; el.insertBefore(ic,lab); }
+      ic.style.background=''; ic.style.width=''; ic.style.height=''; ic.style.borderRadius='';
+      var slotIt=inventory[i];
+      if(slotIt && slotIt.type==='chest'){
+        ic.style.background='#8a6239';
+        ic.style.width='70%'; ic.style.height='55%';
+        ic.style.borderRadius='3px';
+      }
+      el.style.opacity = inventory[i] ? '1' : '0.45';
+    }
+    var it=inventory[selectedSlot];
+    var eq=document.getElementById('equipLabel');
+    if(eq) eq.textContent = it ? itemLabel(it) : 'Keine';
+  }
+  function refreshHeld(){
+    var it=inventory[selectedSlot];
+    currentWeapon = it ? it.type : 'none';
+    if(it && it.type==='chest'){
+      if(typeof heldRifle!=='undefined') heldRifle.visible=false;
+      if(typeof heldRod!=='undefined') heldRod.visible=false;
+      if(typeof heldFish!=='undefined') heldFish.visible=false;
+    }
+    if(typeof rifleGroup!=='undefined') rifleGroup.visible = currentWeapon==='rifle';
+    if(typeof rodGroup!=='undefined') rodGroup.visible = currentWeapon==='rod';
+    if(typeof fishGroup!=='undefined'){
+      fishGroup.visible = currentWeapon==='fish';
+      if(fishGroup.visible && heldFish.material && heldFish.material.color)
+        heldFish.material.color.set(it.alive===false ? 0x555555 : FISH_COLOR);
+    }
+    updateHotbarUI();
+  }
+
+  function spawnWorldItem(it, x, y, z){
+    var geo, mat;
+    if(it.type==='fish'){
+      geo=new THREE.BoxGeometry(0.22, 0.42, 0.14);
+      mat=new THREE.MeshLambertMaterial({
+        color: it.alive===false ? 0x555555 : FISH_COLOR,
+        emissive: it.alive===false ? 0x111111 : 0x331800
+      });
+    } else if(it.type==='rifle'){
+      geo=new THREE.BoxGeometry(0.14, 0.62, 0.14);
+      mat=new THREE.MeshLambertMaterial({color:0x5a4030, emissive:0x1a1008});
+    } else if(it.type==='chest'){
+      geo=new THREE.BoxGeometry(0.50, 0.34, 0.34);
+      mat=new THREE.MeshLambertMaterial({color:0x8a6239, emissive:0x2a1808});
+    } else {
+      geo=new THREE.BoxGeometry(0.09, 0.78, 0.09);
+      mat=new THREE.MeshLambertMaterial({color:0x2a2a2a, emissive:0x111111});
+    }
+    var mesh=new THREE.Mesh(geo, mat);
+    mesh.frustumCulled=false;
+    mesh.position.set(x, y, z);
+    scene.add(mesh);
+    worldItems.push({type:it.type, alive:it.alive, mesh:mesh, spin:Math.random()*6});
+  }
+
+  function updateWorldItems(dt){
+    var t=performance.now()*0.001;
+    for(var i=0;i<worldItems.length;i++){
+      var w=worldItems[i]; if(!w||!w.mesh) continue;
+      var g=getGroundInfo(w.mesh.position.x, w.mesh.position.z);
+      var base=(g.type==='water' ? 0.7 : g.height) + 0.38;
+      w.mesh.position.y = base + Math.sin(t*2.2 + w.spin)*0.05;
+      w.mesh.rotation.x=0;
+      w.mesh.rotation.z=0;
+      w.mesh.rotation.y += dt * 1.35;
+    }
+  }
+
+  function tryInteract(){
+    if(menuOpen) return;
+    if(chestOpen){ closeChest(); return; }
+    if(chestDist()<2.6){ openChest(); return; }
+    if(!pointerLocked) return;
+    var bestD=2.4*2.4, kind=null, idx=-1;
+    var px=camera.position.x, py=camera.position.y-1.0, pz=camera.position.z;
+    function consider(p, k, i){
+      var dx=p.x-px, dy=p.y-py, dz=p.z-pz;
+      var d=dx*dx+dy*dy+dz*dz;
+      if(d<bestD){ bestD=d; kind=k; idx=i; }
+    }
+    for(var i=0;i<worldItems.length;i++){
+      if(worldItems[i] && worldItems[i].mesh) consider(worldItems[i].mesh.position,'world',i);
+    }
+    for(var j=0;j<fishes.length;j++){
+      var f=fishes[j];
+      if(!f || !f.mesh || f.sinking) continue;
+      consider(f.mesh.position,'fish',j);
+    }
+    if(!kind){ showStatus('Nichts zum Aufheben'); return; }
+    var slot=firstEmptySlot();
+    if(slot<0){ showStatus('Inventar voll'); return; }
+    if(kind==='world'){
+      var w=worldItems[idx];
+      inventory[slot]={type:w.type, alive:w.alive};
+      var mesh=w.mesh;
+      mesh.material.dispose();
+      mesh.geometry.dispose();
+      scene.remove(mesh);
+      worldItems.splice(idx,1);
+    } else {
+      var f=fishes[idx];
+      inventory[slot]={type:'fish', alive:!!f.alive};
+      if(f.mesh.parent) f.mesh.parent.remove(f.mesh);
+      if(f.mesh.material && f.mesh.material.dispose) f.mesh.material.dispose();
+      fishes.splice(idx,1);
+    }
+    showStatus('Aufgenommen');
+    updateHotbarUI();
+  }
+
+  function dropSelected(){
+    if(menuOpen || !pointerLocked) return;
+    var it=inventory[selectedSlot];
+    if(!it){ showStatus('Nichts zum Ablegen'); return; }
+    if(it.type==='rod' && typeof rodStatus!=='undefined' && rodStatus!=='ready' && typeof failEscape==='function') failEscape('Angel weggelegt');
+    var dir=new THREE.Vector3();
+    camera.getWorldDirection(dir);
+    dir.y=0;
+    if(dir.lengthSq()<1e-6) dir.set(-Math.sin(player.yaw),0,-Math.cos(player.yaw));
+    dir.normalize();
+    var x=camera.position.x+dir.x*1.5;
+    var z=camera.position.z+dir.z*1.5;
+    var g=getGroundInfo(x,z);
+    var y=(g.type==='water'?0.7:g.height)+0.38;
+    spawnWorldItem(it, x, y, z);
+    inventory[selectedSlot]=null;
+    refreshHeld();
+    showStatus('Abgelegt');
+  }
+
+  refreshHeld();
+
+  // ============== ZIELFERNROHR / GEWEHR-LOGIK ==============
+  var isAiming = false;
+  var scopeOverlay = document.createElement('div');
+  scopeOverlay.style.position='fixed';
+  scopeOverlay.style.inset='0';
+  scopeOverlay.style.pointerEvents='none';
+  scopeOverlay.style.display='none';
+  scopeOverlay.style.background =
+    'radial-gradient(circle at center, transparent 0%, transparent 29%, #000 30%)';
+  scopeOverlay.style.zIndex = '6';
+  document.body.appendChild(scopeOverlay);
+
+  var ammo = 8, maxAmmo = 8, reloading = false;
+
+  function fireRifle(){
+    if(currentWeapon!=='rifle' || reloading) return;
+    if(ammo<=0){ reload(); return; }
+    ammo--;
+    // Trefferprüfung für Fische entlang der Bildschirmmitte
+    var raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(new THREE.Vector2(0,0), camera);
+    var fishMeshes = [];
+    for(var fi=0; fi<fishes.length; fi++) if(fishes[fi].alive) fishMeshes.push(fishes[fi].mesh);
+    var fishHits = raycaster.intersectObjects(fishMeshes, true);
+    if(fishHits.length){
+      var hitObject = fishHits[0].object;
+      for(var fj=0; fj<fishes.length; fj++){
+        if(fishes[fj].alive && (fishes[fj].mesh===hitObject || fishes[fj].mesh.children.indexOf(hitObject)>=0)){
+          fishes[fj].alive = false; if(!fishes[fj].vel) fishes[fj].vel = new THREE.Vector3();
+          fishes[fj].vel.set(0,0,0);
+          gainXp(1);
+          if(fishes[fj].mesh.material && fishes[fj].mesh.material.color) fishes[fj].mesh.material.color.set(0x555555);
+          showStatus('Treffer!'); break;
+        }
+      }
+    }
+    var flash = new THREE.PointLight(0xffee88, 2, 3);
+    flash.position.copy(rifleBody.getWorldPosition(new THREE.Vector3()));
+    scene.add(flash);
+    setTimeout(function(){ scene.remove(flash); }, 60);
+    if(ammo===0) reload();
+  }
+
+  function reload(){
+    if(currentWeapon!=='rifle' || reloading || ammo===maxAmmo) return;
+    reloading = true;
+    setTimeout(function(){
+      ammo = maxAmmo;
+      reloading = false;
+    }, 1200);
+  }
+
+  // ============== ANGEL-LOGIK ==============
+  var bobber = new THREE.Mesh(new THREE.SphereGeometry(0.08,8,8),
+    new THREE.MeshLambertMaterial({color:0xff2222}));
+  bobber.visible = false; scene.add(bobber);
+  var bobberVel = new THREE.Vector3(), bobberActive = false;
+  var rodStatus = 'ready'; // 'ready', 'cast', 'waiting', 'bite', 'mashing', 'onhook', 'landed'
+  var biteTimer = 0, mashCount = 0, mashTimer = 0, hookTimer = 0;
+  var mashFill = 0;
+  var hookFish = null, fishes = [], fishStatusTimer = null;
+  var qteOverlay = document.getElementById('qteOverlay'), qteText = document.getElementById('qteText'), qteBar = document.getElementById('qteBar');
+  var waterLevel = 0.9;
+
+  function showStatus(text){
+    statusEl.innerHTML = text;
+    if(fishStatusTimer) clearTimeout(fishStatusTimer);
+    fishStatusTimer = setTimeout(function(){ fishStatusTimer=null; }, 2000);
+  }
+  function showQte(text, fraction){
+    qteOverlay.style.display='block'; qteText.textContent=text;
+    qteBar.style.width=Math.max(0,Math.min(100,fraction*100))+'%';
+  }
+  function hideQte(){ qteOverlay.style.display='none'; }
+  function failEscape(reason){
+    bobberActive=false; bobber.visible=false; bobberVel.set(0,0,0);
+    if(hookFish){
+      if(hookFish.parent) hookFish.parent.remove(hookFish);
+      hookFish=null;
+    }
+    hideQte(); rodStatus='ready'; showStatus('Entkommen: '+reason);
+  }
+  function spawnFishOnLand(pos){
+  if(hookFish){
+    if(hookFish.parent) hookFish.parent.remove(hookFish);
+    if(hookFish.material){
+      if(hookFish.material.dispose) hookFish.material.dispose();
+    }
+    hookFish=null;
+  }
+  var mesh = new THREE.Mesh(FISH_GEO, new THREE.MeshLambertMaterial({color:FISH_COLOR}));
+  scene.add(mesh);
+  var g=getGroundInfo(pos.x, pos.z);
+  mesh.position.set(pos.x, g.height + 0.12, pos.z);
+  mesh.rotation.set(0,0,0);
+  fishes.push({
+    mesh:mesh, alive:true,
+    vel:new THREE.Vector3(0,0,0),
+    hopCooldown:0.12+Math.random()*0.25,
+    hopVel:0, hopDir:new THREE.Vector3(),
+    hopPattern:Math.floor(Math.random()*3), hopN:0, sideSign:Math.random()<0.5?-1:1,
+    fleeing:true, onLand:true
+  });
+}
+  function castRod(){
+    if(currentWeapon!=='rod' || rodStatus==='bite' || rodStatus==='mashing' || rodStatus==='onhook') return;
+    if(bobberActive){ bobberActive=false; bobber.visible=false; rodStatus='ready'; return; }
+    var dir=new THREE.Vector3(); camera.getWorldDirection(dir);
+    var startPos=camera.position.clone().add(dir.clone().multiplyScalar(0.5));
+    bobber.position.copy(startPos); bobberVel.copy(dir).multiplyScalar(9); bobberVel.y+=3.5;
+    bobber.visible=true; bobberActive=true; rodStatus='cast';
+  }
+  function placeHookFish(){
+    if(!hookFish) return;
+    if(hookFish.parent !== weaponGroup){
+      weaponGroup.add(hookFish);
+    }
+    hookFish.visible = true;
+    hookFish.position.set(0.12, -0.28, -0.9);
+    hookFish.rotation.set(0.35, 0.6, 0.15);
+  }
+
+  function beginHook(){
+    hideQte();
+    rodStatus='onhook';
+    hookTimer=3.0;
+    bobberActive=false;
+    bobber.visible=false;
+    bobberVel.set(0,0,0);
+    if(!hookFish){
+      hookFish = new THREE.Mesh(FISH_GEO, new THREE.MeshLambertMaterial({color:FISH_COLOR}));
+      placeHookFish();
+    }
+    hookFish.visible=true;
+    placeHookFish();
+  }
+  function updateBobber(dt){
+    if(bobberActive && (rodStatus==='cast')){
+      bobberVel.y += GRAVITY*0.5*dt; bobber.position.addScaledVector(bobberVel,dt);
+      var info=getGroundInfo(bobber.position.x,bobber.position.z);
+      if(bobber.position.y<=waterLevel && info.type==='water'){
+        bobber.position.y=waterLevel; bobberVel.set(0,0,0); rodStatus='waiting'; biteTimer=3+Math.random()*4;
+      }
+      if(bobber.position.y < -5) failEscape('zu weit');
+    } else if(bobberActive && rodStatus==='waiting'){
+      biteTimer-=dt; bobber.position.y=waterLevel+Math.sin(performance.now()*0.004)*0.035;
+      if(biteTimer<=0){ rodStatus='bite'; biteTimer=1.2; showQte('JETZT KLICKEN!',1); }
+    } else if(bobberActive && rodStatus==='bite'){
+      biteTimer-=dt; bobber.position.y=waterLevel-0.12+Math.sin(performance.now()*0.01)*0.02;
+      showQte('JETZT KLICKEN!',biteTimer/1.2);
+      if(biteTimer<=0) failEscape('zu langsam');
+    } else if(bobberActive && rodStatus==='mashing'){
+      mashFill -= 0.48 * dt;
+      if(mashFill <= 0){ mashFill=0; failEscape('gerissen'); return; }
+      showQte('ZIEHEN!', mashFill);
+      qteText.textContent = 'ZIEHEN!  '+Math.round(mashFill*100)+'%';
+    }
+    if(rodStatus==='onhook' && hookFish){
+      hookTimer -= dt;
+      placeHookFish();
+      if(hookTimer<=0){
+        var dir=new THREE.Vector3();
+        camera.getWorldDirection(dir);
+        dir.y=0;
+        if(dir.lengthSq()<1e-6) dir.set(-Math.sin(player.yaw),0,-Math.cos(player.yaw));
+        dir.normalize();
+
+        var dist=1.55;
+        var drop=new THREE.Vector3(
+          camera.position.x + dir.x*dist,
+          0,
+          camera.position.z + dir.z*dist
+        );
+        var fi=getGroundInfo(drop.x, drop.z);
+        var playerH=getGroundInfo(camera.position.x, camera.position.z).height;
+
+        if(fi.type==='water' || fi.height > playerH + MAX_STEP){
+          dist=0.85;
+          drop.x=camera.position.x + dir.x*dist;
+          drop.z=camera.position.z + dir.z*dist;
+          fi=getGroundInfo(drop.x, drop.z);
+        }
+
+        if(fi.type==='water'){
+          failEscape('ins Wasser zurück');
+        } else {
+          spawnFishOnLand(drop);
+          rodStatus='landed';
+          showStatus('Fisch flieht – schießen!');
+        }
+      }
+    }
+  }
+  function nearestWater(x,z){
+    var best=null, bd=99999;
+    var cx=Math.round(x), cz=Math.round(z);
+    for(var dx=-14; dx<=14; dx++){
+      for(var dz=-14; dz<=14; dz++){
+        var wi=getGroundInfo(cx+dx, cz+dz);
+        if(wi.type==='water'){
+          var d=dx*dx+dz*dz;
+          if(d<bd){ bd=d; best={x:cx+dx, z:cz+dz}; }
+        }
+      }
+    }
+    return best;
+  }
+
+  function updateFishes(dt){
+    for(var i=fishes.length-1; i>=0; i--){
+      var f=fishes[i];
+      if(!f || !f.mesh){ fishes.splice(i,1); continue; }
+      if(!f.vel) f.vel = new THREE.Vector3();
+      var info=getGroundInfo(f.mesh.position.x, f.mesh.position.z);
+
+      if(!f.alive){
+        var gDead = (info.type==='water' ? waterLevel : info.height+0.62);
+        f.vel.x=0; f.vel.z=0;
+        f.vel.y += -18*dt;
+        f.mesh.position.y += f.vel.y*dt;
+        if(f.mesh.position.y < gDead){ f.mesh.position.y=gDead; f.vel.y=0; }
+        continue;
+      }
+
+      if(info.type==='water' || f.sinking){
+        if(!f.sinking){
+          f.sinking=true;
+          f.sinkTimer=1.4;
+          f.vel.x=0; f.vel.z=0; f.vel.y=-1.8;
+          showStatus('Fisch taucht…');
+        }
+        f.sinkTimer -= dt;
+        f.vel.y = -1.8;
+        f.mesh.position.y += f.vel.y*dt;
+        f.mesh.rotation.x += dt*2.5;
+        if(f.sinkTimer<=0 || f.mesh.position.y < waterLevel-2.5){
+          scene.remove(f.mesh);
+          fishes.splice(i,1);
+          showStatus('Fisch entkommen!');
+        }
+        continue;
+      }
+
+      f.vel.y += -18*dt;
+      f.mesh.position.x += f.vel.x*dt;
+      f.mesh.position.z += f.vel.z*dt;
+      f.mesh.position.y += f.vel.y*dt;
+
+      var ground = info.height + 0.62;
+      var onGround = f.mesh.position.y <= ground + 0.04;
+      if(onGround){
+        f.mesh.position.y = ground;
+        if(f.vel.y < 0) f.vel.y = 0;
+      }
+
+      f.hopCooldown -= dt;
+      if(onGround && f.hopCooldown<=0){
+        f.hopCooldown = 0.05 + Math.random()*0.07;
+        var target = nearestWater(f.mesh.position.x, f.mesh.position.z);
+        var vx, vz;
+        if(target){
+          vx = target.x - f.mesh.position.x;
+          vz = target.z - f.mesh.position.z;
+        } else {
+          vx = f.mesh.position.x; vz = f.mesh.position.z;
+        }
+        var len = Math.sqrt(vx*vx+vz*vz)||1;
+        vx/=len; vz/=len;
+        var sx=-vz, sz=vx;
+        var fwd=2.15, side=0;
+        var p=f.hopPattern, n=f.hopN||0;
+        if(p===0){ side = (Math.random()-0.5)*0.7; }
+        else if(p===1){ side = ((n%2===0)?1:-1)*1.55; }
+        else { side = (n<2 ? 1.7 : 0.25) * (f.sideSign||1); }
+        f.vel.x = vx*fwd + sx*side;
+        f.vel.z = vz*fwd + sz*side;
+        f.vel.y = 4.7 + Math.random()*0.5;
+        f.hopN = n+1;
+      }
+
+      f.mesh.rotation.z = Math.sin(performance.now()*0.012+i)*0.12;
+      f.mesh.rotation.x = Math.sin(performance.now()*0.016+i)*0.08;
+    }
+  }
+
+  // ============== MAUS-EINGABEN ==============
+  document.addEventListener('mousedown', function(e){
+    if(menuOpen || chestOpen) return;
+    if(e.button===0 && tryMineOrPlaceChest()) return;
+    if(!pointerLocked) return;
+    if(e.button===0){
+      if(currentWeapon==='rod' && rodStatus==='bite'){
+        rodStatus='mashing';
+        mashFill=0.20;
+        mashCount=0;
+        mashTimer=3;
+        showQte('ZIEHEN!', mashFill);
+        return;
+      }
+      if(currentWeapon==='rod' && rodStatus==='mashing'){
+        mashFill += 0.14;
+        if(mashFill >= 1){ mashFill=1; beginHook(); }
+        else showQte('ZIEHEN!', mashFill);
+        return;
+      }
+      if(currentWeapon==='rifle') fireRifle(); else if(currentWeapon==='rod') castRod();
+    }
+    if(e.button===2){
+      if((rodStatus==='bite'||rodStatus==='mashing') && currentWeapon==='rod'){ failEscape(rodStatus==='bite'?'zu langsam':'gerissen'); return; }
+      if(currentWeapon==='rifle'){ isAiming=true; camera.fov=30; camera.updateProjectionMatrix(); scopeOverlay.style.display='block'; }
+    }
+  });
+  document.addEventListener('mouseup', function(e){
+    if(menuOpen || chestOpen) return;
+    if(e.button===2 && currentWeapon==='rifle'){ isAiming=false; camera.fov=75; camera.updateProjectionMatrix(); scopeOverlay.style.display='none'; }
+  });
+  document.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+
+  // ============== HUD ==============
+  var playerLevel = 1;
+  var playerXp = 0;
+  var xpFillEl = document.getElementById('xpFill');
+  var xpLvEl = document.getElementById('xpLv');
+  var xpPctEl = document.getElementById('xpPct');
+
+  function xpNeeded(lv){ return Math.max(1, Math.round(2 * lv * 1.6)); }
+  function updateXpBar(){
+    var pct = Math.min(100, Math.floor(playerXp / xpNeeded(playerLevel) * 100));
+    xpFillEl.style.width = pct+'%';
+    xpLvEl.textContent = 'Lv. '+playerLevel;
+    xpPctEl.textContent = pct+'%';
+  }
+  function gainXp(n){
+    playerXp += n;
+    var need = xpNeeded(playerLevel);
+    var leveled = false;
+    while(playerXp >= need){
+      playerXp -= need;
+      playerLevel++;
+      need = xpNeeded(playerLevel);
+      leveled = true;
+    }
+    updateXpBar();
+    if(leveled) showStatus('Level '+playerLevel+'!');
+  }
+
+  var hudEl = document.getElementById('hud');
+  var statusEl = document.getElementById('statusInfo');
+  var lastPos = new THREE.Vector3();
+  
+  function updateHud(dt){
+    updateXpBar();
+    equipLabelEl.textContent = currentWeapon==='rifle' ? 'Gewehr' : currentWeapon==='rod' ? 'Angel' : currentWeapon==='fish' ? 'Fisch' : 'Keine';
+    var speed = camera.position.distanceTo(lastPos)/dt;
+    lastPos.copy(camera.position);
+    hudEl.innerHTML =
+      'Geschwindigkeit: ' + speed.toFixed(2) + ' u/s<br>' +
+      'Position: X:' + camera.position.x.toFixed(1) +
+      ' Y:' + camera.position.y.toFixed(1) +
+      ' Z:' + camera.position.z.toFixed(1);
+
+    // Status Info unten rechts
+    var ammoText = reloading ? 'Lädt...' : ammo + '/' + maxAmmo;
+    var rodStatusText = '';
+    if(currentWeapon==='rifle'){
+      statusEl.innerHTML = 'Munition: ' + ammoText + '<br>—';
+    } else if(currentWeapon==='rod'){
+      if(rodStatus==='ready') rodStatusText = 'Bereit';
+      else if(rodStatus==='cast') rodStatusText = 'Ausgeworfen';
+      else if(rodStatus==='waiting') rodStatusText = 'Warten auf Biss…';
+      else if(rodStatus==='bite') rodStatusText = 'JETZT!';
+      else if(rodStatus==='mashing') rodStatusText = 'Ziehen! '+Math.round(mashFill*100)+'%';
+      else if(rodStatus==='onhook') rodStatusText = 'An Land ziehen! '+Math.max(0,hookTimer).toFixed(1)+'s';
+      else if(rodStatus==='landed') rodStatusText = 'Fisch flieht – schießen!';
+      statusEl.innerHTML = '—<br>Angel: ' + rodStatusText;
+    } else {
+      statusEl.innerHTML = '—<br>—';
+    }
+  }
+
+  // ============== START-BUTTON ==============
+  document.getElementById('startBtn').addEventListener('click', function(){
+    document.getElementById('overlay').style.display = 'none';
+    try{
+      canvasEl.requestPointerLock();
+    }catch(err){
+      console.warn('Pointer Lock beim Start fehlgeschlagen, Klick ins Bild genügt:', err);
+    }
+  });
+
+  // ============== GAME LOOP ==============
+  var clock = new THREE.Clock();
+
+  var EYE = 1.55;
+  var PLAYER_RADIUS = 0.32;
+  var MAX_STEP = 0.55;
+
+  function cellH(x,z){ return getGroundInfo(x,z).height; }
+
+  function isWall(x,z,feetY){
+    return cellH(x,z) > feetY + MAX_STEP;
+  }
+  function areaBlocked(x,z,y){
+    var feetY=y-EYE, r=PLAYER_RADIUS;
+    return isWall(x,z,feetY)||isWall(x+r,z,feetY)||isWall(x-r,z,feetY)
+        ||isWall(x,z+r,feetY)||isWall(x,z-r,feetY)
+        ||isWall(x+r,z+r,feetY)||isWall(x-r,z-r,feetY)
+        ||isWall(x+r,z-r,feetY)||isWall(x-r,z+r,feetY);
+  }
+
+  function supportHeight(x,z,feetY){
+    var r=PLAYER_RADIUS*0.55, best=-999;
+    var pts=[[0,0],[r,0],[-r,0],[0,r],[0,-r]];
+    for(var i=0;i<pts.length;i++){
+      var h=cellH(x+pts[i][0], z+pts[i][1]);
+      if(h<=feetY+MAX_STEP+0.05 && h>best) best=h;
+    }
+    return best>-999 ? best : cellH(x,z);
+  }
+
+  function pushOutWalls(){
+    for(var n=0;n<8;n++){
+      var px=camera.position.x, pz=camera.position.z;
+      var feetY=camera.position.y-EYE;
+      if(!areaBlocked(px,pz,camera.position.y)) return;
+      var gx=0, gz=0, r=PLAYER_RADIUS;
+      var pts=[[0,0],[r,0],[-r,0],[0,r],[0,-r],[r,r],[-r,-r],[r,-r],[-r,r]];
+      for(var i=0;i<pts.length;i++){
+        var sx=px+pts[i][0], sz=pz+pts[i][1];
+        if(isWall(sx,sz,feetY)){ gx+=px-sx; gz+=pz-sz; }
+      }
+      if(gx===0 && gz===0){
+        var bestH=99, bx=0, bz=0;
+        for(var dx=-1;dx<=1;dx++) for(var dz=-1;dz<=1;dz++){
+          if(!dx&&!dz) continue;
+          var h=cellH(px+dx,pz+dz);
+          if(h<bestH){ bestH=h; bx=dx; bz=dz; }
+        }
+        gx=bx; gz=bz;
+      }
+      var len=Math.sqrt(gx*gx+gz*gz)||1;
+      camera.position.x += gx/len*0.10;
+      camera.position.z += gz/len*0.10;
+    }
+  }
+
+  var _fwd = new THREE.Vector3();
+  var _right = new THREE.Vector3();
+  var _move = new THREE.Vector3();
+
+  function updateMovement(dt){
+    var speed = MOVE_SPEED * (keys['ShiftLeft']||keys['ShiftRight'] ? SPRINT_MULT : 1);
+    _fwd.set(Math.sin(player.yaw), 0, Math.cos(player.yaw)).negate();
+    _right.set(-_fwd.z, 0, _fwd.x);
+    _move.set(0,0,0);
+    if(keys['KeyW']) _move.add(_fwd);
+    if(keys['KeyS']) _move.sub(_fwd);
+    if(keys['KeyD']) _move.add(_right);
+    if(keys['KeyA']) _move.sub(_right);
+
+    var yNow = camera.position.y;
+    var oldX = camera.position.x;
+    var oldZ = camera.position.z;
+
+    if(_move.lengthSq()>0){
+      _move.normalize().multiplyScalar(6.2*dt);
+      var wishX = _move.x;
+      var wishZ = _move.z;
+
+      camera.position.x += wishX;   // nur X anwenden
+      if(areaBlocked(camera.position.x, oldZ, yNow)) camera.position.x = oldX;
+
+      camera.position.z += wishZ;   // nur Z anwenden
+      if(areaBlocked(camera.position.x, camera.position.z, yNow)) camera.position.z = oldZ;
+    }
+    if(player.onGround && keys['Space']){
+      player.velY = JUMP_SPEED;
+      player.onGround = false;
+    }
+    player.velY += GRAVITY * dt;
+    camera.position.y += player.velY * dt;
+
+    var feetY = camera.position.y - EYE;
+    var gy = supportHeight(camera.position.x, camera.position.z, feetY);
+    if(player.velY<=0 && feetY<=gy){
+      camera.position.y = gy + EYE;
+      player.velY = 0;
+      player.onGround = true;
+    } else {
+      player.onGround = false;
+    }
+    pushOutWalls();
+    camera.rotation.order = 'YXZ';
+    camera.rotation.y = player.yaw;
+    camera.rotation.x = player.pitch;
+  }
+
+  function animate(){
+    requestAnimationFrame(animate);
+var dt=clock.getDelta();
+if(!(dt>0) || dt>0.05) dt=1/60;
+    updateMovement(dt);
+    updateBobber(dt);
+    updateFishes(dt);
+    updateWorldItems(dt);
+    updateChestAnim(dt);
+    updateHud(dt);
+    renderer.autoClear = true;
+    renderer.render(scene, camera);
+    renderer.clearDepth();
+    renderer.autoClear = false;
+    weaponCam.fov = camera.fov;
+    weaponCam.aspect = camera.aspect;
+    weaponCam.updateProjectionMatrix();
+    renderer.render(weaponScene, weaponCam);
+    renderer.autoClear = true;
+  }
+  animate();
+
+} catch(fatalErr){
+  var box = document.getElementById('errorBox');
+  box.style.display = 'block';
+  box.textContent = 'FATALER FEHLER BEIM LADEN: ' + fatalErr.message;
+  console.error(fatalErr);
+}
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"8607d2a720d14b038279025b2b5a82e5","spa":2}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"8607d2a720d14b038279025b2b5a82e5","spa":2}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"8607d2a720d14b038279025b2b5a82e5","spa":2}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"8607d2a720d14b038279025b2b5a82e5","spa":2}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"8607d2a720d14b038279025b2b5a82e5","spa":2}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"8607d2a720d14b038279025b2b5a82e5","spa":2}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"8607d2a720d14b038279025b2b5a82e5","spa":2}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"8607d2a720d14b038279025b2b5a82e5","spa":2}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"8607d2a720d14b038279025b2b5a82e5","spa":2}' crossorigin="anonymous"></script>
+</body>
+</html>
